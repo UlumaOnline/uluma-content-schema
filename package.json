@@ -1,0 +1,34 @@
+{
+  "name": "@uluma/content-schema",
+  "version": "1.0.0",
+  "description": "Het gedeelde artikelmodel van Uluma: ContentBlock-types, zod-schema's en de inline-tekstparser. Gebruikt door de marketingsites en door Uluma Systems.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "prepare": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.js"
+  },
+  "peerDependencies": {
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.0",
+    "zod": "^3.24.2"
+  }
+}
