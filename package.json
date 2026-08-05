@@ -1,6 +1,6 @@
 {
   "name": "@uluma/content-schema",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Het gedeelde artikelmodel van Uluma: ContentBlock-types, zod-schema's en de inline-tekstparser. Gebruikt door de marketingsites en door Uluma Systems.",
   "license": "UNLICENSED",
   "type": "module",
