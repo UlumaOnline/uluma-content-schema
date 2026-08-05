@@ -97,3 +97,67 @@ test("lege strings tellen als afwezig", () => {
   assert.equal(result.article.metaTitle, undefined);
   assert.equal(result.article.excerpt, undefined);
 });
+
+// ── de vorm die get_preview sinds de fix levert ──────────────────────────────
+//
+// Lege velden worden nu wéggelaten in plaats van als null gestuurd. Alleen
+// kind, slug, title en content zijn altijd aanwezig. De nul-varianten hierboven
+// blijven staan: tolerantie voor beide kost niets en beschermt tegen een
+// wijziging aan de andere kant van de repo-grens die hier niemand ziet aankomen.
+
+/** Een blogpost zonder optionele velden — sleutels ontbreken, geen nulls. */
+const BLOG_OMITTED = {
+  kind: "blog",
+  slug: "een-concept",
+  title: "Een concept",
+  description: "Beschrijving.",
+  category: "Praktijk",
+  author: "Nienke Zijsling",
+  date: "2026-09-01",
+  readingMinutes: 4,
+  content: [{ type: "paragraph", text: "Hallo **wereld**." }],
+};
+
+test("ontbrekende sleutels worden net zo behandeld als null", () => {
+  const result = parsePreview(BLOG_OMITTED);
+  assert.equal(result.ok, true);
+  assert.equal(result.article.metaTitle, undefined);
+  assert.equal(result.article.excerpt, undefined);
+  assert.equal(result.article.location, undefined);
+  assert.equal(result.article.image, undefined);
+  assert.equal(result.article.kind, "blog");
+});
+
+test("een half ingevuld concept met ontbrekende verplichte velden wordt getoond", () => {
+  // Dit is het geval waar het om gaat. Een redacteur klikt halverwege op
+  // "Voorbeeld": categorie en datum zijn er nog niet. De codegen zou dit
+  // terecht weigeren, de voorbeeldweergave moet het juist laten zien.
+  const { kind, slug, title, content } = BLOG_OMITTED;
+  const result = parsePreview({ kind, slug, title, content });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.article.category, undefined);
+  assert.equal(result.article.date, undefined);
+  assert.equal(result.article.readingMinutes, 1);
+  assert.equal(result.article.description, "");
+});
+
+test("kind blijft behouden — anders weet de route niet welk soort artikel dit is", () => {
+  // blogPostSchema en newsArticleSchema zijn strip-objecten en zouden `kind`
+  // stilzwijgend weglaten. Vandaar dat de voorbeeldweergave zijn eigen schema
+  // heeft en niet die twee gebruikt.
+  assert.equal(parsePreview(BLOG_OMITTED).article.kind, "blog");
+  assert.equal(
+    parsePreview({ ...BLOG_OMITTED, kind: "news" }).article.kind,
+    "news",
+  );
+});
+
+test("een blok met een weggelaten optioneel veld komt schoon door", () => {
+  const result = parsePreview({
+    ...BLOG_OMITTED,
+    content: [{ type: "quote", text: "Zonder bronvermelding." }],
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.article.content[0].cite, undefined);
+});
