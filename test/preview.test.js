@@ -151,6 +151,26 @@ test("kind blijft behouden — anders weet de route niet welk soort artikel dit 
     parsePreview({ ...BLOG_OMITTED, kind: "news" }).article.kind,
     "news",
   );
+  assert.equal(
+    parsePreview({ ...BLOG_OMITTED, kind: "knowledge" }).article.kind,
+    "knowledge",
+  );
+});
+
+test("een kennisartikel komt door de voorbeeldweergave", () => {
+  // Zonder `knowledge` in de enum krijgt de redacteur "het concept is niet
+  // geldig" te zien in plaats van zijn tekst. Dat is de hele reden dat dit
+  // pakket vóór de CMS aan de beurt is.
+  const result = parsePreview({ ...BLOG_RESPONSE, kind: "knowledge" });
+  assert.equal(result.ok, true);
+  assert.equal(result.article.kind, "knowledge");
+  assert.equal(result.article.author, "Nienke Zijsling");
+});
+
+test("een onbekende soort wordt wél geweigerd", () => {
+  // De enum is geen formaliteit: hij is de plek waar een typefout in Systems
+  // opvalt in plaats van als leeg scherm te eindigen.
+  assert.equal(parsePreview({ ...BLOG_RESPONSE, kind: "artikel" }).ok, false);
 });
 
 test("een blok met een weggelaten optioneel veld komt schoon door", () => {

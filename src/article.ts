@@ -72,6 +72,28 @@ export function newsArticleSchema(categories: CategoryList) {
 }
 
 /**
+ * Kennisartikel. Uitleg die je opzoekt en herleest, in tegenstelling tot een
+ * blog (een mening of een ervaring) en nieuws (een bericht van de organisatie).
+ *
+ * Vandaag structureel gelijk aan `blogPostSchema`, en dat blijft een tijdje zo.
+ * Toch een eigen naam en geen alias: dit is de plek waar de twee later uit
+ * elkaar mogen lopen zonder dat iemand per ongeluk de blog meeneemt. Dezelfde
+ * afweging als bij `newsArticleSchema`, dat ook maar in twee velden verschilt.
+ *
+ * De categorielijst is wél een andere. Een blogcategorie zegt waar een stuk
+ * *over* gaat, een kenniscategorie wat voor *soort* uitleg het is; ze delen
+ * geen enkele waarde. Vandaar dat de lijst hier net als overal wordt
+ * meegegeven en niet vastligt.
+ */
+export function knowledgeArticleSchema(categories: CategoryList) {
+  return z.object({
+    ...commonFields(categories),
+    metaTitle: z.string().min(1).max(120).optional(),
+    author: z.string().min(1),
+  });
+}
+
+/**
  * Strengere variant voor de codegen: naast het gewone schema controleert deze
  * ook of elke tabelrij evenveel cellen heeft als er kolomkoppen zijn.
  *
@@ -85,6 +107,7 @@ export function strictContent() {
 
 export type BlogPostInput = z.infer<ReturnType<typeof blogPostSchema>>;
 export type NewsArticleInput = z.infer<ReturnType<typeof newsArticleSchema>>;
+export type KnowledgeArticleInput = z.infer<ReturnType<typeof knowledgeArticleSchema>>;
 
 /** Eén validatiefout, plat genoeg om als regel in een buildlog te passen. */
 export interface ContentIssue {

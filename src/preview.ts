@@ -36,12 +36,17 @@ function nullishText(max?: number) {
  * De vorm die `get_preview` teruggeeft, genormaliseerd naar iets dat je
  * rechtstreeks aan `ArticleBody` kunt geven.
  *
- * `kind` bepaalt of het een blog- of nieuwsartikel is, zodat de route weet welke
- * dateline en welke structured data erbij horen. De rest volgt `BlogPost` en
- * `NewsArticle`, met alle optionele velden nullish.
+ * `kind` bepaalt welk soort artikel het is, zodat de route weet welke dateline
+ * en welke structured data erbij horen. De rest volgt `BlogPost`,
+ * `NewsArticle` en `KnowledgeArticle`, met alle optionele velden nullish.
+ *
+ * De enum staat hier los van de drie schema's hieronder en dat is met opzet:
+ * dit valideert een concept dat nog nergens aan hoeft te voldoen. Ontbreekt een
+ * soort hier, dan krijgt de redacteur "het concept is niet geldig" te zien in
+ * plaats van zijn eigen tekst.
  */
 export const previewArticleSchema = z.object({
-  kind: z.enum(["blog", "news"]),
+  kind: z.enum(["blog", "news", "knowledge"]),
   slug: z.string(),
   title: z.string(),
   description: z
