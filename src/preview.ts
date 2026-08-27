@@ -47,6 +47,18 @@ function nullishText(max?: number) {
  */
 export const previewArticleSchema = z.object({
   kind: z.enum(["blog", "news", "knowledge"]),
+  /*
+   * De taal van het concept, en niet die van de site.
+   *
+   * Zonder dit veld zet een meertalige site de omlijsting vast op zijn
+   * standaardtaal: een Nederlands concept krijgt dan een Engelse datumnotatie
+   * en een Engels leestijdlabel. De tekst klopt, de rand eromheen niet, en dat
+   * is precies het soort fout waar niemand een melding van krijgt.
+   *
+   * Nullish met een terugval op een lege string, net als de andere velden hier:
+   * dit schema valideert een concept dat nog nergens aan hoeft te voldoen.
+   */
+  locale: nullishText(),
   slug: z.string(),
   title: z.string(),
   description: z

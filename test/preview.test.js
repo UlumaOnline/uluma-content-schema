@@ -157,6 +157,20 @@ test("kind blijft behouden — anders weet de route niet welk soort artikel dit 
   );
 });
 
+test("de taal van het concept komt door", () => {
+  // Zonder dit veld kan een meertalige site niet weten in welke taal een
+  // concept staat, en valt hij terug op zijn standaardtaal.
+  assert.equal(parsePreview({ ...BLOG_RESPONSE, locale: "nl" }).article.locale, "nl");
+  assert.equal(parsePreview({ ...BLOG_RESPONSE, locale: "en" }).article.locale, "en");
+});
+
+test("een concept zonder taal blijft geldig", () => {
+  // De voorbeeldweergave valideert een concept en geen publicatie; een
+  // ontbrekend veld mag hier nooit een leeg scherm opleveren.
+  const { locale, ...zonder } = { ...BLOG_RESPONSE, locale: "nl" };
+  assert.equal(parsePreview(zonder).ok, true);
+});
+
 test("een kennisartikel komt door de voorbeeldweergave", () => {
   // Zonder `knowledge` in de enum krijgt de redacteur "het concept is niet
   // geldig" te zien in plaats van zijn tekst. Dat is de hele reden dat dit
