@@ -65,10 +65,36 @@ export interface LevelStep {
   dividerBelow?: string;
 }
 
+/** De zes koppenniveaus uit HTML. */
+export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+
 /** Eén stuk artikelinhoud. */
 export type ContentBlock =
   | { type: "paragraph"; text: string }
-  | { type: "heading"; text: string }
+  /**
+   * Een kop, met het niveau erbij.
+   *
+   * `level` ontbrak tot v1.4.0 en de editor had er twee bloktypes voor:
+   * `heading` werd `<h2>` en `subheading` werd `<h3>`. In de editor stonden
+   * daar de iconen H1 en H2 bij, en dat klopte dus met geen van beide. Nienke
+   * liep er in september tegenaan bij Revloft.
+   *
+   * Ontbreekt `level`, lees dan 2. Dat is precies wat `heading` altijd al was,
+   * dus oude blokken hoeven niet aangeraakt te worden om goed te blijven.
+   *
+   * Let op bij het renderen: de artikeltitel is de `<h1>` van de pagina. Een
+   * blok met `level: 1` zet er een tweede naast. Dat mag de redactie kiezen,
+   * maar het is geen standaard.
+   */
+  | { type: "heading"; text: string; level?: HeadingLevel }
+  /**
+   * @deprecated Sinds v1.4.0 vervangen door `heading` met `level: 3`.
+   *
+   * Blijft in de union staan zolang er sites zijn die hem nog renderen.
+   * Weghalen is een breaking change: `assertNever` maakt er een compileerfout
+   * van, en dat is precies de bedoeling, maar niet in dezelfde release als de
+   * toevoeging hierboven.
+   */
   | { type: "subheading"; text: string }
   | { type: "list"; items: string[]; ordered?: boolean }
   | { type: "quote"; text: string; cite?: string }
@@ -120,9 +146,22 @@ export const zLevelStep = z.object({
   dividerBelow: z.string().min(1).optional(),
 });
 
+export const zHeadingLevel = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+  z.literal(4),
+  z.literal(5),
+  z.literal(6),
+]);
+
 export const zBlock = z.discriminatedUnion("type", [
   z.object({ type: z.literal("paragraph"), text: z.string() }),
-  z.object({ type: z.literal("heading"), text: z.string().min(1) }),
+  z.object({
+    type: z.literal("heading"),
+    text: z.string().min(1),
+    level: zHeadingLevel.optional(),
+  }),
   z.object({ type: z.literal("subheading"), text: z.string().min(1) }),
   z.object({
     type: z.literal("list"),
