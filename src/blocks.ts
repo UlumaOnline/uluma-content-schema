@@ -109,7 +109,17 @@ export type ContentBlock =
    * lopen er zonder rand in over. Uitzondering, geen standaard — een foto heeft
    * dit niet nodig.
    */
-  | { type: "image"; image: ArticleImage; framed?: boolean };
+  /**
+   * `caption` is het zichtbare onderschrift: bronvermelding, toelichting,
+   * fotocredit. Nadrukkelijk iets anders dan `image.alt` — dat is de
+   * beschrijving voor wie het beeld niet ziet en hoort niet op het scherm.
+   * Een afbeelding kan beide hebben, en ze zeggen dan ook verschillende dingen.
+   *
+   * Inline-opmaak mag erin, net als in de tekst van een blok: een
+   * bronvermelding is vaak een link. Daarom staat hij ook in
+   * `blockInlineTexts`, zodat de linkcontrole van de codegen hem meeneemt.
+   */
+  | { type: "image"; image: ArticleImage; framed?: boolean; caption?: string };
 
 /** Alle bloktypes, als waarde. Handig voor een "+ blok toevoegen"-menu. */
 export const BLOCK_TYPES = [
@@ -194,6 +204,9 @@ export const zBlock = z.discriminatedUnion("type", [
     type: z.literal("image"),
     image: zArticleImage,
     framed: z.boolean().optional(),
+    // `.min(1)`: een lege caption is geen caption maar een lege regel onder de
+    // afbeelding. Weglaten dus, net als bij `cite` op een citaat.
+    caption: z.string().min(1).optional(),
   }),
 ]);
 

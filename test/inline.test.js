@@ -100,3 +100,77 @@ test("isExternalHref onderscheidt intern van extern", () => {
   assert.equal(isExternalHref("http://example.com"), true);
   assert.equal(isExternalHref("mailto:info@uitblinkers.ai"), true);
 });
+
+/*
+ * ── Cursief en onderstreept (v1.5.0) ────────────────────────────────────────
+ *
+ * De referentietest hierboven blijft staan en blijft slagen: geen van zijn
+ * gevallen bevat de nieuwe markeringen, dus hij pint nog steeds exact vast hoe
+ * vet en links zich gedragen. Dat is precies wat hij moet doen — de nieuwe
+ * takken mogen het oude gedrag niet verschuiven, en dat bewijst hij.
+ */
+
+test("cursief en onderstreept worden herkend", () => {
+  assert.deepEqual(parseInline("Een *cursief* woord."), [
+    { kind: "text", text: "Een " },
+    { kind: "italic", text: "cursief" },
+    { kind: "text", text: " woord." },
+  ]);
+  assert.deepEqual(parseInline("Een ++onderstreept++ woord."), [
+    { kind: "text", text: "Een " },
+    { kind: "underline", text: "onderstreept" },
+    { kind: "text", text: " woord." },
+  ]);
+});
+
+test("vet wint van cursief, want ** staat vóór * in het patroon", () => {
+  assert.deepEqual(parseInline("**vet**"), [{ kind: "bold", text: "vet" }]);
+  assert.deepEqual(parseInline("**vet** en *cursief*"), [
+    { kind: "bold", text: "vet" },
+    { kind: "text", text: " en " },
+    { kind: "italic", text: "cursief" },
+  ]);
+});
+
+test("een rekensom wordt niet cursief", () => {
+  // Dit is de reden dat er een niet-spatie-eis op de markering staat. Zonder
+  // die eis wordt hier " 3 = 15 en 2 " cursief, midden in lopende tekst.
+  const input = "5 * 3 = 15 en 2 * 4 = 8";
+  assert.deepEqual(parseInline(input), [{ kind: "text", text: input }]);
+});
+
+test("losse plussen worden niet onderstreept", () => {
+  const input = "een ++ twee en drie ++ vier";
+  assert.deepEqual(parseInline(input), [{ kind: "text", text: input }]);
+});
+
+test("een ster in een linklabel splijt de link niet", () => {
+  assert.deepEqual(parseInline("[een *ster* erin](/pad)"), [
+    { kind: "link", label: "een *ster* erin", href: "/pad", external: false },
+  ]);
+});
+
+test("één teken tussen de markeringen mag", () => {
+  assert.deepEqual(parseInline("*a* en ++b++"), [
+    { kind: "italic", text: "a" },
+    { kind: "text", text: " en " },
+    { kind: "underline", text: "b" },
+  ]);
+});
+
+test("een ongepaarde markering blijft gewone tekst", () => {
+  assert.deepEqual(parseInline("Losse * ster en losse ++ plus."), [
+    { kind: "text", text: "Losse * ster en losse ++ plus." },
+  ]);
+});
+
+test("stripInline haalt ook de nieuwe markeringen weg", () => {
+  assert.equal(
+    stripInline("Een *cursief* en ++onderstreept++ stuk met **vet**."),
+    "Een cursief en onderstreept stuk met vet.",
+  );
+});
+
+test("inlineHrefs blijft alleen links vinden", () => {
+  assert.deepEqual(inlineHrefs("*cursief* ++onder++ [een](/a) **vet**"), ["/a"]);
+});
