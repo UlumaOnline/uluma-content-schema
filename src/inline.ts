@@ -3,6 +3,8 @@
  * blok is toegestaan.
  *
  *   **vet**             → { kind: "bold" }
+ *   *cursief*           → { kind: "italic" }
+ *   ++onderstreept++    → { kind: "underline" }
  *   [label](/pad)       → { kind: "link", external: false }
  *   [label](https://…)  → { kind: "link", external: true }
  *
@@ -19,6 +21,8 @@
 export type InlineToken =
   | { kind: "text"; text: string }
   | { kind: "bold"; text: string }
+  | { kind: "italic"; text: string }
+  | { kind: "underline"; text: string }
   | { kind: "link"; label: string; href: string; external: boolean };
 
 /**
@@ -33,9 +37,30 @@ export function isExternalHref(href: string): boolean {
  * Let op de globale vlag: `lastIndex` blijft staan tussen aanroepen, dus dit
  * patroon moet per aanroep vers zijn. Vandaar dat het hier in de functie staat
  * en niet op moduleniveau.
+ *
+ * De volgorde van de alternatieven is dragend. `**` staat vóór `*`, anders
+ * knipt de cursief-tak elk vet stuk doormidden. Een link staat vóór cursief,
+ * zodat een `*` in een label niet de link opensplijt.
+ *
+ * Cursief en onderstreept eisen een niet-spatie direct binnen de markering,
+ * aan beide kanten. Zonder die regel wordt `5 * 3 en 2 * 4` cursief vanaf de
+ * eerste ster, en `een ++ twee` onderstreept — rekensommen en losse plussen
+ * komen in deze teksten echt voor. Vet heeft die regel bewust níét: dat gedrag
+ * ligt vast in de referentietest en veranderen zou bestaande artikelen anders
+ * laten renderen dan ze nu doen.
  */
 function inlinePattern(): RegExp {
-  return /\*\*(.+?)\*\*|\[([^\]]+)\]\(([^)]+)\)/g;
+  return new RegExp(
+    [
+      /\*\*(?<bold>.+?)\*\*/,
+      /\+\+(?<underline>[^+\s](?:[^+]*[^+\s])?)\+\+/,
+      /\[(?<label>[^\]]+)\]\((?<href>[^)]+)\)/,
+      /\*(?<italic>[^*\s](?:[^*]*[^*\s])?)\*/,
+    ]
+      .map((part) => part.source)
+      .join("|"),
+    "g",
+  );
 }
 
 /**
@@ -60,11 +85,16 @@ export function parseInline(text: string): InlineToken[] {
     if (match.index > last) {
       tokens.push({ kind: "text", text: text.slice(last, match.index) });
     }
-    if (match[1] !== undefined) {
-      tokens.push({ kind: "bold", text: match[1] });
+    const groups = match.groups ?? {};
+    if (groups.bold !== undefined) {
+      tokens.push({ kind: "bold", text: groups.bold });
+    } else if (groups.italic !== undefined) {
+      tokens.push({ kind: "italic", text: groups.italic });
+    } else if (groups.underline !== undefined) {
+      tokens.push({ kind: "underline", text: groups.underline });
     } else {
-      const label = match[2] ?? "";
-      const href = match[3] ?? "";
+      const label = groups.label ?? "";
+      const href = groups.href ?? "";
       tokens.push({ kind: "link", label, href, external: isExternalHref(href) });
     }
     last = regex.lastIndex;

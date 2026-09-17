@@ -16,7 +16,7 @@ import { inlineHrefs } from "./inline.js";
  *
  * Let op wat er *niet* in zit: `cta.label` (knoptekst, geen inline-opmaak),
  * `levels`-velden (badge, naam, vraag, beschrijving — die worden letterlijk
- * gerenderd) en `image.alt`. Dat is met opzet — dit is de verzameling waar
+ * gerenderd) en `image.alt`. Het onderschrift van een afbeelding zit er wél in. Dat is met opzet — dit is de verzameling waar
  * inline-opmaak in mag staan, en dus ook de verzameling die de codegen op
  * kapotte links controleert.
  */
@@ -40,7 +40,10 @@ export function blockInlineTexts(block: ContentBlock): string[] {
     case "levels":
       return [];
     case "image":
-      return [];
+      // Het onderschrift wel, `image.alt` niet: alt is geen inline-opmaak en
+      // geen zichtbare tekst. Staat de caption hier niet in, dan controleert de
+      // codegen de links erin niet en is een typefout daar een echte 404.
+      return block.caption ? [block.caption] : [];
   }
 }
 
@@ -60,7 +63,7 @@ export function blockPlainTexts(block: ContentBlock): string[] {
         ...(item.dividerBelow ? [item.dividerBelow] : []),
       ]);
     case "image":
-      return [block.image.alt];
+      return block.caption ? [block.image.alt, block.caption] : [block.image.alt];
     default:
       return blockInlineTexts(block);
   }

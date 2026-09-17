@@ -65,12 +65,30 @@ Binnen de tekst van een blok is een piepklein stukje markdown toegestaan:
 
 ```
 **vet**             → <strong>
+*cursief*           → <em>
+++onderstreept++    → <u>
 [label](/pad)       → interne link
 [label](https://…)  → externe link, opent in een nieuw tabblad
 ```
 
 Meer niet, en dat is een keuze: elke uitbreiding hier moet door élke renderer
 gevolgd worden. `parseInline` levert tokens; wat je ermee tekent bepaal je zelf.
+
+Drie dingen over de set die je aan de tekens niet ziet:
+
+**`**` gaat vóór `*`.** De volgorde in het patroon is dragend; andersom knipt de
+cursief-tak elk vet stuk doormidden.
+
+**Cursief en onderstreept eisen een niet-spatie binnen de markering.** Zonder
+die regel wordt `5 * 3 = 15 en 2 * 4` cursief vanaf de eerste ster. Vet heeft
+die eis niet — dat gedrag ligt vast in de referentietest en veranderen zou
+bestaande artikelen anders laten renderen dan ze nu doen.
+
+**`++` en niet `__` voor onderstreept.** `__` betekent in echte markdown vet, en
+dit is nadrukkelijk geen echte markdown-parser; een teken lenen dat elders iets
+anders betekent maakt het verwarrend op precies de plek waar het al verwarrend
+is. En let op wat onderstreepte tekst op het web betekent: dat is de conventie
+voor een link. Gebruik het spaarzaam.
 
 ## Ontwikkelen
 
