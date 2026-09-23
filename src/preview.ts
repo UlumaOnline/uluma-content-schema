@@ -66,6 +66,7 @@ export const previewArticleSchema = z.object({
     .nullish()
     .transform((v) => v ?? ""),
   excerpt: nullishText(),
+  kern: nullishText(400),
   metaTitle: nullishText(),
   category: nullishText(),
   location: nullishText(),

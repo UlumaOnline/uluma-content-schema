@@ -46,6 +46,19 @@ export interface ArticleImage {
   /** Intrinsieke pixelmaat. Reserveert ruimte en voedt og:image:width/height. */
   width: number;
   height: number;
+  /**
+   * Of dit beeld door AI is gemaakt. De sites zetten er een merkteken bij; de
+   * transparantieplicht uit de AI Act vraagt erom.
+   *
+   * Eigenschap van het bestand en niet van de plaatsing: dezelfde foto is in
+   * elk artikel even AI-gegenereerd. In Uluma Systems staat hij dan ook op de
+   * mediarij, en een `image`-blok kopieert hem mee bij het kiezen — net als
+   * alt, width en height. De hero leest hem via de foreign key.
+   *
+   * Ontbreekt hij, lees dan `false`. Dat is wat elk bestaand beeld is, dus
+   * bestaande content hoeft niet aangeraakt te worden.
+   */
+  aiGenerated?: boolean;
 }
 
 /** Eén stap in een `levels`-blok: de 6 niveaus van The Operator Shift als trap. */
@@ -63,6 +76,27 @@ export interface LevelStep {
   dim?: boolean;
   /** Streepjeslijn direct onder deze stap, bijv. een overgangslabel. */
   dividerBelow?: string;
+}
+
+/**
+ * Eén kaart in een `steps`-blok.
+ *
+ * Los van `LevelStep` en niet ermee samengevoegd: die beschrijft de zes
+ * niveaus van The Operator Shift en heeft een badge, een vraag en een
+ * uitlichtvlag. Deze heeft een kop en alinea's. Ze lijken alleen op elkaar
+ * doordat ze allebei een rijtje kaarten opleveren.
+ */
+export interface Step {
+  /** De vette regel bovenaan de kaart. */
+  title: string;
+  /**
+   * De alinea's eronder, als aparte strings en niet als één tekst met witregels.
+   *
+   * Een renderer die op `\n\n` moet splitsen is een tweede, ongeschreven
+   * parser naast `parseInline`, en die twee gaan het een keer oneens worden.
+   * Inline-opmaak mag er wel in, net als in een gewone alinea.
+   */
+  body: string[];
 }
 
 /** De zes koppenniveaus uit HTML. */
@@ -85,8 +119,15 @@ export type ContentBlock =
    * Let op bij het renderen: de artikeltitel is de `<h1>` van de pagina. Een
    * blok met `level: 1` zet er een tweede naast. Dat mag de redactie kiezen,
    * maar het is geen standaard.
+   *
+   * `tocLabel` is de korte naam in de inhoudsopgave. Die lijst wordt afgeleid
+   * uit de koppen van niveau 2, en een kop die de hele lading dekt is daar
+   * vaak te lang: "Schijnzekerheid: als AI gelijk heeft in de feiten en
+   * ongelijk in de conclusie" hoort als "Schijnzekerheid" in de lijst te
+   * staan. Ontbreekt hij, dan is `text` het label — dus invullen hoeft alleen
+   * waar het nodig is.
    */
-  | { type: "heading"; text: string; level?: HeadingLevel }
+  | { type: "heading"; text: string; level?: HeadingLevel; tocLabel?: string }
   /**
    * @deprecated Sinds v1.4.0 vervangen door `heading` met `level: 3`.
    *
@@ -103,6 +144,31 @@ export type ContentBlock =
   | { type: "cta"; text: string; label: string; href: string }
   | { type: "note"; text: string }
   | { type: "levels"; items: LevelStep[] }
+  /**
+   * Een genummerde reeks kaarten: per punt een vette kop en er een of meer
+   * alinea's onder. Bedoeld voor opsommingen die te veel tekst hebben voor een
+   * `list` en te weinig structuur voor een `table` — "drie redenen waarom",
+   * "drie controles die je kunt doen".
+   *
+   * De nummering komt van de renderer en staat niet in de inhoud: een auteur
+   * die punt twee verwijdert hoort niet zelf te hoeven hernummeren.
+   */
+  | { type: "steps"; items: Step[] }
+  /**
+   * De bronnenlijst onderaan een artikel.
+   *
+   * Vormt met `list` bijna hetzelfde, en is er toch apart, om twee redenen.
+   * De eerste is semantiek: dit is een bronvermelding en geen opsomming, en
+   * dat onderscheid is later nodig voor citatie-markup. De tweede is opmaak —
+   * links in lopende tekst krijgen op de sites een opvallende pil, en een
+   * bronnenlijst hoort daar juist níét in mee te gaan. Met een eigen bloktype
+   * is dat een redactionele keuze in plaats van een toevalligheid van markup.
+   *
+   * Geen eigen kop, net als `faq`: daar zet je een gewoon `heading`-blok
+   * boven. Zo blijft "Bronnen" een echte H2 en komt hij vanzelf in de
+   * inhoudsopgave terecht.
+   */
+  | { type: "sources"; items: string[] }
   /**
    * `framed` zet een witte rand om de afbeelding. Bedoeld voor screenshots van
    * een licht scherm: die hebben dezelfde achtergrondkleur als de pagina en
@@ -134,6 +200,8 @@ export const BLOCK_TYPES = [
   "note",
   "levels",
   "image",
+  "steps",
+  "sources",
 ] as const satisfies readonly ContentBlock["type"][];
 
 // ── zod ──────────────────────────────────────────────────────────────────────
@@ -144,6 +212,7 @@ export const zArticleImage = z.object({
   alt: z.string(),
   width: z.number().int().positive(),
   height: z.number().int().positive(),
+  aiGenerated: z.boolean().optional(),
 });
 
 export const zLevelStep = z.object({
@@ -154,6 +223,20 @@ export const zLevelStep = z.object({
   featured: z.boolean().optional(),
   dim: z.boolean().optional(),
   dividerBelow: z.string().min(1).optional(),
+});
+
+/**
+ * Losser dan `zLevelStep` hierboven: lege strings mogen.
+ *
+ * De editor maakt een nieuw blok aan met één lege kaart erin, en daarna wil de
+ * redacteur hem kunnen bekijken terwijl hij typt. Zou `title` hier `.min(1)`
+ * eisen, dan is een vers blok ongeldig en toont de voorbeeldweergave een
+ * foutmelding in plaats van het artikel. Dezelfde afweging als bij `list` en
+ * `paragraph`, die om precies die reden ook geen ondergrens hebben.
+ */
+export const zStep = z.object({
+  title: z.string(),
+  body: z.array(z.string()).min(1),
 });
 
 export const zHeadingLevel = z.union([
@@ -171,6 +254,9 @@ export const zBlock = z.discriminatedUnion("type", [
     type: z.literal("heading"),
     text: z.string().min(1),
     level: zHeadingLevel.optional(),
+    // `.min(1)`: een leeg label is geen label maar een lege chip in de
+    // inhoudsopgave. Weglaten dus, net als bij `cite` en `caption`.
+    tocLabel: z.string().min(1).optional(),
   }),
   z.object({ type: z.literal("subheading"), text: z.string().min(1) }),
   z.object({
@@ -200,6 +286,8 @@ export const zBlock = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("note"), text: z.string().min(1) }),
   z.object({ type: z.literal("levels"), items: z.array(zLevelStep).min(1) }),
+  z.object({ type: z.literal("steps"), items: z.array(zStep).min(1) }),
+  z.object({ type: z.literal("sources"), items: z.array(z.string()).min(1) }),
   z.object({
     type: z.literal("image"),
     image: zArticleImage,

@@ -33,6 +33,21 @@ function commonFields(categories: CategoryList) {
     title: z.string().min(1).max(200),
     description: z.string().min(1).max(320),
     excerpt: z.string().min(1).max(400).optional(),
+    /*
+     * De kernzin(nen) onder de hero, in het ontwerp gelabeld "DE KERN".
+     *
+     * Het derde samenvattingsveld naast `description` (meta/SEO) en `excerpt`
+     * (de kaart in het overzicht). Ze lijken op elkaar en dat is het risico:
+     * dit is de samenvatting die in het artikel zélf staat.
+     *
+     * Een veld en geen bloktype, want er is er precies één en hij staat altijd
+     * op dezelfde plek. Als blok zou hij twee keer kunnen voorkomen en moet
+     * elke renderer bepalen welke de echte is.
+     *
+     * 400 tekens, gelijk aan de CHECK-constraint op `articles.kern`, zodat de
+     * database en de codegen het over dezelfde grens eens zijn.
+     */
+    kern: z.string().min(1).max(400).optional(),
     category: z.enum(categories),
     date: zIsoDate,
     readingMinutes: z.number().int().min(1).max(60),

@@ -39,6 +39,18 @@ export function blockInlineTexts(block: ContentBlock): string[] {
       return [block.text];
     case "levels":
       return [];
+    case "steps":
+      // Kop én alinea's. De kop staat hier — anders dan bij `heading`, waar een
+      // kop bewust géén inline-opmaak krijgt — omdat dit er geen sectiekop is
+      // maar de eerste regel van een kaart, en de renderers hem daarom net als
+      // de rest door `parseInline` halen. Zie ook `faq`, waar de vraag om
+      // dezelfde reden meedoet.
+      return block.items.flatMap((item) => [item.title, ...item.body]);
+    case "sources":
+      // Juist hier moet de linkcontrole langs: een bronnenlijst bestáát
+      // grotendeels uit links, en een kapotte bron is precies het soort fout
+      // dat niemand handmatig terugvindt.
+      return block.items;
     case "image":
       // Het onderschrift wel, `image.alt` niet: alt is geen inline-opmaak en
       // geen zichtbare tekst. Staat de caption hier niet in, dan controleert de

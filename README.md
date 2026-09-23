@@ -31,7 +31,7 @@ wilt geen twee zods in één bundel.
 
 | Module | Inhoud |
 |---|---|
-| `blocks.ts` | `ContentBlock` (11 varianten), `ArticleImage`, `LevelStep`, `zBlock`, `zStrictBlock`, `BLOCK_TYPES`, `assertNever` |
+| `blocks.ts` | `ContentBlock` (13 varianten), `ArticleImage`, `LevelStep`, `Step`, `zBlock`, `zStrictBlock`, `BLOCK_TYPES`, `assertNever` |
 | `inline.ts` | `parseInline`, `stripInline`, `inlineHrefs`, `isExternalHref` |
 | `walk.ts` | `blockInlineTexts`, `blockPlainTexts`, `blockImages`, `blockHrefs` |
 | `article.ts` | `blogPostSchema()`, `newsArticleSchema()`, `strictContent()`, foutrapportage |
@@ -55,9 +55,31 @@ De volgorde is opzettelijk lastig te omzeilen:
 5. In de CMS: voeg een entry toe aan `blockRegistry`. Dat is
    `satisfies Record<ContentBlock["type"], BlockDef>`, dus ook dat is een
    compileerfout tot het formulier bestaat.
+6. **Pas als élke aangesloten site stap 4 heeft gedaan en gedeployed is:** zet
+   het type in `CREATABLE_TYPES`, zodat het in het "+ blok"-menu verschijnt.
 
 Stap 4 en 5 kunnen los in de tijd, maar geen van beide kan stilzwijgend
 overgeslagen worden. Dat is het hele punt.
+
+### Waarom stap 6 apart staat
+
+Dit is de enige stap in de rij die stilletjes iets kan slopen, en hij is niet
+door een compiler af te dwingen — want hij speelt zich af in een andere repo
+dan die waar de fout valt.
+
+Een **veld** dat een site niet kent is onschadelijk: de zod-schema's staan op
+`"strip"`, dus een onbekende sleutel wordt weggegooid en de build merkt niets.
+Een **bloktype** dat een site niet kent is dat niet. `zBlock` is een
+discriminated union: een onbekend `type` is geen geldig blok, `validate.mjs`
+verzamelt dat als issue en de codegen stopt met `process.exit(1)`.
+
+Het gevolg is scheef verdeeld. De redacteur die het blok kiest ziet niets
+bijzonders — de CMS accepteert het, want die draait op de nieuwe versie. De
+build die omvalt is die van een site waar diegene misschien niet eens aan
+werkte, en de fout wijst naar een artikel dat er prima uitziet.
+
+Daarom: het pakket mag vooruitlopen, de CMS mag een formulier hebben liggen,
+maar het menu volgt als laatste.
 
 ## Inline-opmaak
 
