@@ -81,6 +81,52 @@ werkte, en de fout wijst naar een artikel dat er prima uitziet.
 Daarom: het pakket mag vooruitlopen, de CMS mag een formulier hebben liggen,
 maar het menu volgt als laatste.
 
+### De compileercheck vangt ook een verouderde installatie
+
+Minder bekend dan de kant hierboven, en het scheelt een uur zoeken.
+
+Stap 1 tot en met 5 beschrijven wat er misgaat als een `case` ontbreekt. Maar
+dezelfde poort werkt van de andere kant: staat er nog 1.5.0 in `node_modules`
+terwijl je de nieuwe cases al hebt getypt, dan bestaat dat type niet in de
+union die de compiler ziet. Groen blijven kan de typecheck dan niet.
+
+**Aan de foutcode zie je welke kant van de poort je te pakken hebt**, en dat
+scheelt de verkeerde reparatie:
+
+| Foutcode | Waar | Betekenis | Oplossing |
+|---|---|---|---|
+| `TS2345` | op `assertNever(block, …)` | het schema is nieuwer dan je cases | case toevoegen |
+| `TS2678` | op `case "steps"` zelf | je installatie is ouder dan je `package.json` | opnieuw installeren |
+
+Nagemeten met 1.5.0 geïnstalleerd en de cases van 1.6.0 in de renderer:
+
+```
+article-body.tsx(374,10): error TS2678: Type '"steps"' is not comparable to type
+  '"table" | "image" | "heading" | … | "levels"'
+article-body.tsx(397,18): error TS2339: Property 'items' does not exist on type 'never'
+```
+
+Bij `TS2678` komt er een stoet `TS2339` en `TS7006` achteraan, omdat het blok
+daarna op `never` narrowt. Luidruchtig, maar niet onduidelijk zolang je de
+bovenste fout leest.
+
+Dat is nuttig, want een verouderde installatie dient zich anders nergens aan.
+`git checkout -- package-lock.json` zet de oude resolved commit terug en npm
+honoreert die daarna zonder te klagen: je lockfile zegt dan v1.6.0 terwijl
+`node_modules` op 1.5.0 blijft staan. Verversen kan met de ref er expliciet bij:
+
+```
+npm install "github:UlumaOnline/uluma-content-schema#v1.6.0"
+```
+
+En één waarschuwing die daarbij hoort: draai `npm install` in een site-repo met
+de Node-versie uit hun `.nvmrc` (`fnm use 22`). De twee marketingsites draaien
+op TanStack Start, en npm 11 snoeit daar `nitro/node_modules/lru-cache` weg
+terwijl npm 10 op de CI-runner die regel nodig heeft. Dat valt niet lokaal om
+maar pas bij `npm ci`, en de diff is duizenden regels groot zonder dat er een
+foutmelding bij zit. Dit pakket zelf heeft er geen last van, en Uluma Systems
+ook niet — dat is een gewone Vite-SPA zonder die geneste boom.
+
 ## Inline-opmaak
 
 Binnen de tekst van een blok is een piepklein stukje markdown toegestaan:
