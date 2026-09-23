@@ -61,6 +61,40 @@ De volgorde is opzettelijk lastig te omzeilen:
 Stap 4 en 5 kunnen los in de tijd, maar geen van beide kan stilzwijgend
 overgeslagen worden. Dat is het hele punt.
 
+### Een véld toevoegen is minder goed beveiligd dan een bloktype
+
+De stappen hierboven gaan over een nieuwe variant in `ContentBlock`. Voeg je
+een veld toe aan een gedeeld type als `ArticleImage`, dan leidt geen enkele
+compiler je naar de plek waar het misgaat.
+
+Die plek is de stagingstap van de codegen. Beide sites halen hun beelden uit
+Supabase Storage, verwerken ze en schrijven er een geïmporteerd asset voor
+terug. De functie die dat doet bouwt zijn resultaat op als een **expliciet
+objectliteral** en spreidt de databaserij niet, en dat is met opzet: de maten
+uit de beeldverwerking horen die uit de database te overschrijven.
+
+Gevolg: elk nieuw veld moet daar apart langs. Doe je dat niet, dan valt het
+stilzwijgend weg — geldige JavaScript die minder teruggeeft dan de bron had,
+dus geen typefout en geen melding. De faalmodus is dat de redactie zegt "ik heb
+het aangezet en er gebeurt niks", en dat iedereen vervolgens in de renderer
+gaat zoeken.
+
+Dat overkwam `aiGenerated` in v1.6.0 bijna. Bij een nieuw veld hoort dus een
+vijfde plek op het lijstje:
+
+```
+schema → zod → walk.ts → renderer → stagingstap van de codegen
+```
+
+De vorm die beide sites aanhouden geeft het alleen door als het iets zegt,
+gelijk aan wat de view in Uluma Systems doet:
+
+```js
+...(image.aiGenerated ? { aiGenerated: true } : {}),
+```
+
+Zo blijft het gegenereerde bestand voor elk bestaand beeld byte-identiek.
+
 ### Waarom stap 6 apart staat
 
 Dit is de enige stap in de rij die stilletjes iets kan slopen, en hij is niet
