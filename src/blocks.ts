@@ -99,6 +99,50 @@ export interface Step {
   body: string[];
 }
 
+/**
+ * Een getal met een bron: het hero-getal bovenaan een artikel en het
+ * `stat`-blok in de tekst. Eén vorm voor allebei, omdat het in het ontwerp
+ * hetzelfde component is in twee maten.
+ *
+ * Alle vier de velden horen ingevuld te zijn. Een getal zonder bron is in een
+ * kennisbankartikel een bewering, en dat is precies wat dit blok niet wil zijn.
+ * In `zBlock` mogen ze toch leeg (een vers blok moet in de voorbeeldweergave
+ * kunnen staan); `zStrictBlock` en het artikelschema eisen ze.
+ */
+export interface StatFigure {
+  /** Het getal zelf, als tekst: "3,5%", "€ 53", "1 op 4". */
+  value: string;
+  /** De zin die bij het getal hoort, beginnend waar het getal ophoudt. */
+  text: string;
+  /** De bron zoals die op het scherm staat: "6sense, 2022". */
+  source: string;
+  /** Waar de bron te lezen is. Een externe URL. */
+  sourceUrl: string;
+}
+
+/**
+ * Eén kaart in een `cards`-blok.
+ *
+ * Los van `Step`, hoewel ze lijken: een stap is een stuk van een reeks met
+ * meerdere alinea's, een kaart is één van een handvol naast elkaar te
+ * vergelijken gevallen met één korte tekst. Ze staan ook anders: stappen onder
+ * elkaar, kaarten in een raster.
+ */
+export interface Card {
+  title: string;
+  /** Eén korte tekst. Inline-opmaak mag. */
+  text: string;
+  /** Een klein label onder de tekst, bijv. "Meestal niet gemeten". */
+  badge?: string;
+  /**
+   * De "Dan:"-regel onderaan, bijv. "meer budget voor bereik.". Het woord
+   * "Dan:" zet de renderer ervoor, in de taal van het artikel.
+   */
+  conclusion?: string;
+  /** Licht de kaart uit. Hooguit één per raster; de editor bewaakt dat. */
+  highlight?: boolean;
+}
+
 /** De zes koppenniveaus uit HTML. */
 export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -142,7 +186,12 @@ export type ContentBlock =
   | { type: "table"; headers: string[]; rows: string[][] }
   | { type: "faq"; items: { q: string; a: string }[] }
   | { type: "cta"; text: string; label: string; href: string }
-  | { type: "note"; text: string }
+  /**
+   * `label` is een kicker boven de tekst, bijv. "Lees ook". Sinds v1.7.0.
+   * Ontbreekt hij, dan is dit het terzijde zoals het altijd was. Vrije tekst en
+   * geen vaste waarde, zodat een Engels artikel er "Read next" in kan zetten.
+   */
+  | { type: "note"; text: string; label?: string }
   | { type: "levels"; items: LevelStep[] }
   /**
    * Een genummerde reeks kaarten: per punt een vette kop en er een of meer
@@ -185,7 +234,27 @@ export type ContentBlock =
    * bronvermelding is vaak een link. Daarom staat hij ook in
    * `blockInlineTexts`, zodat de linkcontrole van de codegen hem meeneemt.
    */
-  | { type: "image"; image: ArticleImage; framed?: boolean; caption?: string };
+  | { type: "image"; image: ArticleImage; framed?: boolean; caption?: string }
+  /**
+   * Een getal met een bron, in de tekst. Sinds v1.7.0.
+   *
+   * Hetzelfde component als `heroStat` op het artikel, in een kleinere maat.
+   * `text` mag inline-opmaak hebben; `sourceUrl` gaat mee in de linkcontrole.
+   * De redactieregel "hooguit twee per artikel" bewaakt de editor, niet dit
+   * schema: een artikel met drie is lelijk, niet kapot.
+   */
+  | ({ type: "stat" } & StatFigure)
+  /**
+   * Een raster van kaarten. Sinds v1.7.0.
+   *
+   * Zonder `label` nummert de renderer de kaarten 01, 02, 03; met `label`
+   * wordt het "Uitkomst 1", "Uitkomst 2". Net als bij `steps` staat de
+   * nummering niet in de data.
+   *
+   * 3 tot 6 kaarten en hooguit één `highlight` is de afspraak; de editor
+   * bewaakt het, het schema niet, om dezelfde reden als bij `stat`.
+   */
+  | { type: "cards"; label?: string; items: Card[] };
 
 /** Alle bloktypes, als waarde. Handig voor een "+ blok toevoegen"-menu. */
 export const BLOCK_TYPES = [
@@ -202,6 +271,8 @@ export const BLOCK_TYPES = [
   "image",
   "steps",
   "sources",
+  "stat",
+  "cards",
 ] as const satisfies readonly ContentBlock["type"][];
 
 // ── zod ──────────────────────────────────────────────────────────────────────
@@ -237,6 +308,40 @@ export const zLevelStep = z.object({
 export const zStep = z.object({
   title: z.string(),
   body: z.array(z.string()).min(1),
+});
+
+/**
+ * Leeg mag hier, net als bij `zStep`: de editor maakt een vers blok met lege
+ * velden en de voorbeeldweergave moet dat kunnen tonen. De eisen staan in
+ * `zStrictBlock` (codegen) en in `zStatFigureStrict` (het artikelveld).
+ */
+export const zStatFigure = z.object({
+  value: z.string(),
+  text: z.string(),
+  source: z.string(),
+  sourceUrl: z.string(),
+});
+
+const zHttpUrl = z
+  .string()
+  .regex(/^https?:\/\/\S+$/, "verwacht een volledige URL die begint met http(s)://");
+
+/** Het hero-getal: geen concept meer maar een veld op een gepubliceerd artikel. */
+export const zStatFigureStrict = z.object({
+  value: z.string().min(1),
+  text: z.string().min(1),
+  source: z.string().min(1),
+  sourceUrl: zHttpUrl,
+});
+
+export const zCard = z.object({
+  title: z.string(),
+  text: z.string(),
+  // `.min(1)` op de optionele velden: leeg is weglaten, geen lege badge of
+  // een kale "Dan:". Zelfde afweging als bij `caption` en `tocLabel`.
+  badge: z.string().min(1).optional(),
+  conclusion: z.string().min(1).optional(),
+  highlight: z.boolean().optional(),
 });
 
 export const zHeadingLevel = z.union([
@@ -284,7 +389,11 @@ export const zBlock = z.discriminatedUnion("type", [
     label: z.string().min(1),
     href: z.string().min(1),
   }),
-  z.object({ type: z.literal("note"), text: z.string().min(1) }),
+  z.object({
+    type: z.literal("note"),
+    text: z.string().min(1),
+    label: z.string().min(1).optional(),
+  }),
   z.object({ type: z.literal("levels"), items: z.array(zLevelStep).min(1) }),
   z.object({ type: z.literal("steps"), items: z.array(zStep).min(1) }),
   z.object({ type: z.literal("sources"), items: z.array(z.string()).min(1) }),
@@ -296,18 +405,53 @@ export const zBlock = z.discriminatedUnion("type", [
     // afbeelding. Weglaten dus, net als bij `cite` op een citaat.
     caption: z.string().min(1).optional(),
   }),
+  zStatFigure.extend({ type: z.literal("stat") }),
+  z.object({
+    type: z.literal("cards"),
+    label: z.string().min(1).optional(),
+    items: z.array(zCard).min(1),
+  }),
 ]);
 
 export const zBlocks = z.array(zBlock);
 
 /**
+ * Wat de codegen strenger wil dan de voorbeeldweergave.
+ *
  * Een tabel waarvan elke rij evenveel cellen heeft als er kolomkoppen zijn.
  * Los van `zBlock` omdat de renderer een rij met te weinig cellen wel overleeft
  * (er ontstaat een gat) maar het altijd een fout van de redacteur is. De codegen
  * gebruikt dit, de voorbeeldweergave niet — daar wil je een half-afgemaakte
  * tabel gewoon kunnen zien.
+ *
+ * Sinds v1.7.0 ook: een `stat` heeft alle vier de velden en een echte URL, en
+ * een kaart in `cards` heeft een titel. Aantallen (3 tot 6 kaarten, hooguit
+ * twee getallen per artikel) staan hier bewust níét: die bewaakt de editor.
+ * Een build die omvalt op een smaakregel houdt elk ander artikel van die site
+ * ook tegen.
  */
 export const zStrictBlock = zBlock.superRefine((block, ctx) => {
+  if (block.type === "stat") {
+    // Een getal zonder bron is een bewering. Dit is de poort naar productie;
+    // de editor laat een half ingevuld blok wel toe, de build niet.
+    const result = zStatFigureStrict.safeParse(block);
+    if (!result.success) {
+      for (const issue of result.error.issues) ctx.addIssue({ ...issue });
+    }
+    return;
+  }
+  if (block.type === "cards") {
+    block.items.forEach((card, i) => {
+      if (card.title.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["items", i, "title"],
+          message: "kaart zonder titel",
+        });
+      }
+    });
+    return;
+  }
   if (block.type !== "table") return;
   block.rows.forEach((row, i) => {
     if (row.length !== block.headers.length) {

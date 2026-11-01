@@ -11,7 +11,7 @@
  */
 
 import { z } from "zod";
-import { zBlocks, zStrictBlock, zArticleImage } from "./blocks.js";
+import { zBlocks, zStrictBlock, zArticleImage, zStatFigureStrict } from "./blocks.js";
 import { SLUG_PATTERN } from "./slug.js";
 
 /** Categorielijst zoals `z.enum` hem wil: minstens één waarde. */
@@ -48,6 +48,36 @@ function commonFields(categories: CategoryList) {
      * database en de codegen het over dezelfde grens eens zijn.
      */
     kern: z.string().min(1).max(400).optional(),
+    /*
+     * De drie velden hieronder komen uit de bouwbrief voor de Revloft-kennisbank
+     * van november 2026, en staan net als `kern` op het artikel en niet als
+     * blok in de tekst: er is er hooguit één van elk, op een vaste plek.
+     *
+     * Uluma Systems geeft ze alleen door als ze áf zijn (de view filtert een
+     * half ingevuld hero-getal weg), dus hier mogen ze streng zijn zonder dat
+     * een concept-in-wording een build breekt.
+     */
+    /** Het grote getal bovenaan, in plaats van de foto. De foto blijft og:image. */
+    heroStat: zStatFigureStrict.optional(),
+    /**
+     * "In het kort": precies drie zinnen onder de hero. Staat hij er, dan toont
+     * de site hem in plaats van `kern` — twee samenvattingen onder elkaar zegt
+     * hetzelfde twee keer.
+     */
+    keyPoints: z.tuple([z.string().min(1), z.string().min(1), z.string().min(1)]).optional(),
+    /**
+     * De CTA-band onderaan, boven de veelgestelde vragen. Alleen de tekst staat
+     * in het artikel; de feitenrij en de knop zijn per site centraal. `facts`
+     * ontbreekt bijna altijd en betekent dan `true`.
+     */
+    ctaBand: z
+      .object({
+        kicker: z.string().min(1),
+        heading: z.string().min(1),
+        text: z.string().min(1),
+        facts: z.boolean().optional(),
+      })
+      .optional(),
     category: z.enum(categories),
     date: zIsoDate,
     readingMinutes: z.number().int().min(1).max(60),

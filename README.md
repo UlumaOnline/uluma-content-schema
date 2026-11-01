@@ -31,7 +31,7 @@ wilt geen twee zods in één bundel.
 
 | Module | Inhoud |
 |---|---|
-| `blocks.ts` | `ContentBlock` (13 varianten), `ArticleImage`, `LevelStep`, `Step`, `zBlock`, `zStrictBlock`, `BLOCK_TYPES`, `assertNever` |
+| `blocks.ts` | `ContentBlock` (15 varianten), `ArticleImage`, `LevelStep`, `Step`, `StatFigure`, `Card`, `zBlock`, `zStrictBlock`, `BLOCK_TYPES`, `assertNever` |
 | `inline.ts` | `parseInline`, `stripInline`, `inlineHrefs`, `isExternalHref` |
 | `walk.ts` | `blockInlineTexts`, `blockPlainTexts`, `blockImages`, `blockHrefs` |
 | `article.ts` | `blogPostSchema()`, `newsArticleSchema()`, `strictContent()`, foutrapportage |
@@ -160,6 +160,25 @@ terwijl npm 10 op de CI-runner die regel nodig heeft. Dat valt niet lokaal om
 maar pas bij `npm ci`, en de diff is duizenden regels groot zonder dat er een
 foutmelding bij zit. Dit pakket zelf heeft er geen last van, en Uluma Systems
 ook niet — dat is een gewone Vite-SPA zonder die geneste boom.
+
+### Artikelvelden die een blok lijken
+
+`heroStat`, `keyPoints` en `ctaBand` (sinds v1.7.0) zien er op de site uit als
+blokken, maar staan op het artikel, net als `kern`: er is er hooguit één van
+elk en hij staat altijd op dezelfde plek. Drie afspraken die je aan de types
+niet ziet:
+
+- **Uluma Systems geeft ze alleen door als ze af zijn.** De view laat een half
+  ingevuld hero-getal, een "In het kort" met minder dan drie punten of een
+  CTA-band zonder kop weg. Daardoor kan het artikelschema streng zijn zonder
+  dat een redacteur halverwege een build breekt.
+- **`heroStat` vervangt de foto alleen op de artikelpagina.** `image` blijft
+  de og:image en de foto in het overzicht.
+- **`keyPoints` gaat vóór `kern`.** Staan ze er allebei, dan toont de site
+  alleen "In het kort".
+
+De feitenrij en de knop van de CTA-band staan niet in de content maar per
+site in de code, zodat een prijswijziging één aanpassing is.
 
 ## Inline-opmaak
 

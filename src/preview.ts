@@ -22,7 +22,7 @@
  */
 
 import { z } from "zod";
-import { zBlocks, zArticleImage } from "./blocks.js";
+import { zBlocks, zArticleImage, zStatFigure } from "./blocks.js";
 
 /** Accepteert null én undefined, levert altijd undefined of de waarde zelf. */
 function nullishText(max?: number) {
@@ -67,6 +67,23 @@ export const previewArticleSchema = z.object({
     .transform((v) => v ?? ""),
   excerpt: nullishText(),
   kern: nullishText(400),
+  // Los, net als de rest hier. `get_preview` geeft ze met dezelfde filter als
+  // de view (alleen als ze af zijn), maar een concept hoeft nergens aan te
+  // voldoen, dus de vorm is het enige wat hier gecontroleerd wordt.
+  heroStat: zStatFigure.nullish().transform((value) => value ?? undefined),
+  keyPoints: z
+    .array(z.string())
+    .nullish()
+    .transform((value) => value ?? undefined),
+  ctaBand: z
+    .object({
+      kicker: z.string(),
+      heading: z.string(),
+      text: z.string(),
+      facts: z.boolean().optional(),
+    })
+    .nullish()
+    .transform((value) => value ?? undefined),
   metaTitle: nullishText(),
   category: nullishText(),
   location: nullishText(),

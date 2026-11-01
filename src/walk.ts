@@ -56,6 +56,18 @@ export function blockInlineTexts(block: ContentBlock): string[] {
       // geen zichtbare tekst. Staat de caption hier niet in, dan controleert de
       // codegen de links erin niet en is een typefout daar een echte 404.
       return block.caption ? [block.caption] : [];
+    case "stat":
+      // Alleen de zin. Het getal en de bron worden letterlijk gerenderd; de
+      // bron-URL zit in `blockHrefs`, net als de knop van een cta.
+      return [block.text];
+    case "cards":
+      // Titel, tekst en conclusie, net als bij `steps`. Het label van het
+      // raster en de badge zijn letterlijke tekst.
+      return block.items.flatMap((card) => [
+        card.title,
+        card.text,
+        ...(card.conclusion ? [card.conclusion] : []),
+      ]);
   }
 }
 
@@ -76,6 +88,20 @@ export function blockPlainTexts(block: ContentBlock): string[] {
       ]);
     case "image":
       return block.caption ? [block.image.alt, block.caption] : [block.image.alt];
+    case "note":
+      return block.label ? [block.label, block.text] : [block.text];
+    case "stat":
+      return [block.value, block.text, block.source];
+    case "cards":
+      return [
+        ...(block.label ? [block.label] : []),
+        ...block.items.flatMap((card) => [
+          card.title,
+          card.text,
+          ...(card.badge ? [card.badge] : []),
+          ...(card.conclusion ? [card.conclusion] : []),
+        ]),
+      ];
     default:
       return blockInlineTexts(block);
   }
@@ -110,11 +136,13 @@ export function blockImages(blocks: ContentBlock[]): {
 }
 
 /**
- * Elke `href` in een blok: de links ín de tekst, plus de knop-href van een cta.
- * Die laatste staat niet in de tekst maar is wel een echte link, en juist de
- * cta's wijzen naar de plekken waar het geld verdiend wordt.
+ * Elke `href` in een blok: de links ín de tekst, plus de knop-href van een cta
+ * en de bron van een `stat`. Die staan niet in de tekst maar zijn wel echte
+ * links, en een kapotte bron onder een getal haalt het hele getal onderuit.
  */
 export function blockHrefs(block: ContentBlock): string[] {
   const fromText = blockInlineTexts(block).flatMap((text) => inlineHrefs(text));
-  return block.type === "cta" ? [...fromText, block.href] : fromText;
+  if (block.type === "cta") return [...fromText, block.href];
+  if (block.type === "stat" && block.sourceUrl) return [...fromText, block.sourceUrl];
+  return fromText;
 }
