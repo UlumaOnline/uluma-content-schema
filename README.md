@@ -180,6 +180,11 @@ niet ziet:
 De feitenrij en de knop van de CTA-band staan niet in de content maar per
 site in de code, zodat een prijswijziging één aanpassing is.
 
+De CTA-band staat boven de veelgestelde vragen, dus een site knipt het artikel
+vlak voor het eerste `faq`-blok. Sinds v1.8.0 heeft dat blok een eigen
+optionele `heading`, zodat de kop met de vragen meegaat zonder dat de site
+hoeft te raden of een los `heading`-blok erboven bij de vragen hoort.
+
 ## Inline-opmaak
 
 Binnen de tekst van een blok is een piepklein stukje markdown toegestaan:

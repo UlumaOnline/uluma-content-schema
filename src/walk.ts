@@ -34,7 +34,11 @@ export function blockInlineTexts(block: ContentBlock): string[] {
     case "table":
       return [...block.headers, ...block.rows.flat()];
     case "faq":
-      return block.items.flatMap((item) => [item.q, item.a]);
+      // De kop vooraan, net als een los `heading`-blok hier meedoet.
+      return [
+        ...(block.heading ? [block.heading] : []),
+        ...block.items.flatMap((item) => [item.q, item.a]),
+      ];
     case "cta":
       return [block.text];
     case "levels":

@@ -134,6 +134,21 @@ test("een terzijde met label 'Lees ook'", () => {
   assert.throws(() => zBlock.parse({ ...note, label: "" }));
 });
 
+// ── faq.heading ──────────────────────────────────────────────────────────────
+
+test("een faq zonder kop blijft wat hij was", () => {
+  const faq = { type: "faq", items: [{ q: "Wat kost het?", a: "Niets." }] };
+  assert.deepEqual(zBlock.parse(faq), faq);
+  assert.deepEqual(blockInlineTexts(faq), ["Wat kost het?", "Niets."]);
+});
+
+test("een faq met kop, en die kop staat vooraan in de tekst", () => {
+  const faq = { type: "faq", heading: "Veelgestelde vragen", items: [{ q: "Wat kost het?", a: "Niets." }] };
+  assert.deepEqual(zBlock.parse(faq), faq);
+  assert.throws(() => zBlock.parse({ ...faq, heading: "" }));
+  assert.deepEqual(blockInlineTexts(faq), ["Veelgestelde vragen", "Wat kost het?", "Niets."]);
+});
+
 // ── artikelvelden ────────────────────────────────────────────────────────────
 
 const zKennis = knowledgeArticleSchema(["Uitleg"]);

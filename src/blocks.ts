@@ -184,7 +184,16 @@ export type ContentBlock =
   | { type: "list"; items: string[]; ordered?: boolean }
   | { type: "quote"; text: string; cite?: string }
   | { type: "table"; headers: string[]; rows: string[][] }
-  | { type: "faq"; items: { q: string; a: string }[] }
+  /**
+   * `heading` is de kop boven de vragen, bijv. "Veelgestelde vragen". Sinds
+   * v1.8.0. Tot dan zette de redactie er een los `heading`-blok boven, en dat
+   * werkt nog steeds. Maar sinds de CTA-band (v1.7.0) knipt Revloft het artikel
+   * vlak voor de vragen, en een kop die los staat moet de site dan raden: hoort
+   * hij bij de vragen of bij de tekst ervoor? In het blok zelf hoeft niemand te
+   * raden. De sites renderen hem als `<h2>`, de kop van een eigen sectie, en
+   * nemen hem op in de inhoudsopgave net als een `heading` van niveau 2.
+   */
+  | { type: "faq"; heading?: string; items: { q: string; a: string }[] }
   | { type: "cta"; text: string; label: string; href: string }
   /**
    * `label` is een kicker boven de tekst, bijv. "Lees ook". Sinds v1.7.0.
@@ -381,6 +390,9 @@ export const zBlock = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("faq"),
+    // `.min(1)`: leeg is weglaten, geen lege kop. Zelfde afweging als bij
+    // `note.label` en `tocLabel`.
+    heading: z.string().min(1).optional(),
     items: z.array(z.object({ q: z.string().min(1), a: z.string().min(1) })).min(1),
   }),
   z.object({
